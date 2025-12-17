@@ -96,6 +96,58 @@ const UNIT_OPTIONS = [
   'bag',
 ] as const;
 
+// Default System Prompt
+const DEFAULT_SYSTEM_PROMPT = `You write short, SEO-optimized listing descriptions for 86 Deadstock—a B2B restaurant surplus marketplace.
+
+## TONE & STYLE
+
+Write like one restaurant operator talking to another. Direct, practical, keyword-rich.
+- Describe what the product IS and why it's useful
+- Focus on practical value for foodservice operations
+- Include relevant keywords naturally for Google/Gemini SEO
+- NO filler phrases like "confirm with seller", "verify details", "check specs"
+
+## BRAND IDENTIFICATION
+
+If a brand name appears in the title (e.g., "Cambro", "Vollrath", "True", "Hobart"):
+- Include the brand name prominently in the description
+- Brands add credibility and search value
+
+## STRICT RULES
+
+1. ONLY use facts from the title, category, and any provided description—no inventing details
+2. Do NOT guess or assume:
+   - Sizes, dimensions, quantities
+   - Materials or composition (unless explicitly stated)
+   - Certifications or compliance
+   - Eco-friendly, sustainable, compostable, recyclable (NEVER assume these)
+   - Brand reputation or quality claims
+   - Condition or age
+3. Do NOT include seller instructions or CYA language
+4. Focus on product identity and practical use cases in foodservice
+5. If unit of measurement is provided (case, box, pack), mention it naturally
+6. For vague titles, describe the general product category's use in foodservice
+
+## LENGTH
+
+- Target: 200 characters
+- Maximum: 280 characters
+- Keep it tight: every word should add SEO or informational value
+
+## OUTPUT FORMAT
+
+Valid JSON with exactly these keys:
+- short_description: string
+- category: string (echo input exactly)
+- confidence: number (0.0 to 1.0)
+
+## CONFIDENCE SCORING
+
+0.85–1.0: Clear item with specifics (brand, size, quantity)
+0.55–0.84: Clear item but missing key details
+0.25–0.54: Vague or generic
+0.0–0.24: Unusable`;
+
 export default function AiDescriptionTestPage() {
   // Form state
   const [title, setTitle] = useState('');
@@ -104,6 +156,11 @@ export default function AiDescriptionTestPage() {
   const [listingId, setListingId] = useState('');
   const [userDescription, setUserDescription] = useState('');
   const [unitOfMeasurement, setUnitOfMeasurement] = useState('');
+  
+  // Prompt state
+  const [showPromptSettings, setShowPromptSettings] = useState(false);
+  const [useCustomPrompt, setUseCustomPrompt] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
 
   // Result state
   const [result, setResult] = useState<GenerationResult | null>(null);
@@ -151,6 +208,7 @@ export default function AiDescriptionTestPage() {
           ...(listingId.trim() && { listingId: listingId.trim() }),
           ...(userDescription.trim() && { userDescription: userDescription.trim() }),
           ...(unitOfMeasurement && { unitOfMeasurement }),
+          ...(useCustomPrompt && customPrompt.trim() && { customPrompt: customPrompt.trim() }),
         }),
       });
 
@@ -172,7 +230,7 @@ export default function AiDescriptionTestPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [title, category, mode, listingId, userDescription, unitOfMeasurement]);
+  }, [title, category, mode, listingId, userDescription, unitOfMeasurement, useCustomPrompt, customPrompt]);
 
   const handleSubmitRating = useCallback(async () => {
     if (!result || rating === null) return;
@@ -338,6 +396,106 @@ export default function AiDescriptionTestPage() {
               <p className="text-xs text-slate-500 mt-2">
                 Helps the AI generate a more accurate description without guessing
               </p>
+            </div>
+
+            {/* Prompt Settings (Collapsible) */}
+            <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 rounded-xl border border-purple-700/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowPromptSettings(!showPromptSettings)}
+                className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-purple-800/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">⚙️</span>
+                  <span className="text-sm font-semibold text-purple-200">
+                    Prompt Settings
+                  </span>
+                  {useCustomPrompt && (
+                    <span className="px-2 py-0.5 text-xs bg-purple-600 text-white rounded-full">
+                      Custom
+                    </span>
+                  )}
+                </div>
+                <span className={`text-purple-300 transition-transform ${showPromptSettings ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+              
+              {showPromptSettings && (
+                <div className="px-6 pb-6 space-y-4 border-t border-purple-700/30">
+                  {/* Toggle Custom Prompt */}
+                  <div className="pt-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={useCustomPrompt}
+                          onChange={(e) => setUseCustomPrompt(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-purple-600 transition-colors"></div>
+                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                      </div>
+                      <span className="text-sm text-purple-200">
+                        Use Custom Prompt
+                      </span>
+                    </label>
+                    <p className="text-xs text-slate-500 mt-2 ml-14">
+                      Override the default system prompt with your own
+                    </p>
+                  </div>
+
+                  {/* Prompt Editor */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-semibold text-purple-200">
+                        {useCustomPrompt ? 'Custom System Prompt' : 'Default System Prompt (read-only)'}
+                      </label>
+                      {useCustomPrompt && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomPrompt(DEFAULT_SYSTEM_PROMPT)}
+                          className="text-xs text-purple-400 hover:text-purple-300 underline"
+                        >
+                          Reset to Default
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      disabled={!useCustomPrompt}
+                      rows={12}
+                      className={`w-full px-4 py-3 bg-slate-900/80 border rounded-lg font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-y ${
+                        useCustomPrompt 
+                          ? 'border-purple-600 text-white' 
+                          : 'border-slate-700 text-slate-400 cursor-not-allowed'
+                      }`}
+                    />
+                    <div className="flex justify-between text-xs text-slate-500 mt-2">
+                      <span>{customPrompt.length} characters</span>
+                      <span>
+                        {useCustomPrompt 
+                          ? '✏️ Editable - changes apply to next generation' 
+                          : '🔒 Enable "Use Custom Prompt" to edit'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Prompt Tips */}
+                  {useCustomPrompt && (
+                    <div className="bg-purple-950/50 rounded-lg p-4 border border-purple-800/30">
+                      <h4 className="text-sm font-semibold text-purple-200 mb-2">💡 Prompt Tips</h4>
+                      <ul className="text-xs text-slate-400 space-y-1 list-disc list-inside">
+                        <li>Keep the JSON output format section to ensure proper parsing</li>
+                        <li>Adjust the LENGTH section to change character limits</li>
+                        <li>Add/remove items from STRICT RULES to change guardrails</li>
+                        <li>Modify TONE & STYLE for different voice and keywords</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Mode & Listing ID */}

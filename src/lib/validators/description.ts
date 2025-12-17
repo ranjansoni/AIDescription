@@ -158,6 +158,15 @@ export const unitOfMeasurementSchema = z
   .optional();
 
 /**
+ * Custom prompt validator (for testing/overriding default system prompt)
+ */
+export const customPromptSchema = z
+  .string()
+  .min(100, { message: 'Custom prompt must be at least 100 characters' })
+  .max(10000, { message: 'Custom prompt must not exceed 10000 characters' })
+  .optional();
+
+/**
  * Request schema for POST /api/listings/generate-description
  * 
  * @example
@@ -178,6 +187,7 @@ export const generateDescriptionRequestSchema = z.object({
   mode: modeSchema,
   userDescription: userDescriptionSchema,
   unitOfMeasurement: unitOfMeasurementSchema,
+  customPrompt: customPromptSchema,
 });
 
 /**

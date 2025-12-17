@@ -104,6 +104,7 @@ export async function generateDescription(
   options?: {
     description?: string;
     unitOfMeasurement?: string;
+    customPrompt?: string;
   }
 ): Promise<GenerationResult> {
   // Normalize title for consistent caching
@@ -115,6 +116,9 @@ export async function generateDescription(
     console.log(`[DescriptionGenerator] Request: "${title}" in "${category}"`);
     console.log(`[DescriptionGenerator] Cache key: ${cacheKey}`);
     console.log(`[DescriptionGenerator] Mode: ${mode}`);
+    if (options?.customPrompt) {
+      console.log(`[DescriptionGenerator] Using CUSTOM prompt (${options.customPrompt.length} chars)`);
+    }
   }
 
   // Step 1: Check cache
@@ -164,8 +168,10 @@ export async function generateDescription(
   } else {
     try {
       const userMessage = buildUserMessage(normalized, category, options);
+      // Use custom prompt if provided, otherwise use default
+      const systemPrompt = options?.customPrompt || SYSTEM_PROMPT;
       const openAiResult = await generateStructuredDescription(
-        SYSTEM_PROMPT,
+        systemPrompt,
         userMessage
       );
 

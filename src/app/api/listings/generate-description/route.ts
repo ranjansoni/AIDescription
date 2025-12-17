@@ -108,7 +108,7 @@ export async function POST(
       );
     }
 
-    const { title, category, listingId, mode, userDescription, unitOfMeasurement } = validationResult.data;
+    const { title, category, listingId, mode, userDescription, unitOfMeasurement, customPrompt } = validationResult.data;
 
     // Additional validation: title length after normalization
     const trimmedTitle = title.trim();
@@ -129,6 +129,7 @@ export async function POST(
         hasListingId: Boolean(listingId),
         hasUserDescription: Boolean(userDescription),
         unitOfMeasurement,
+        hasCustomPrompt: Boolean(customPrompt),
       });
     }
 
@@ -136,6 +137,7 @@ export async function POST(
     const result = await generateDescription(title, category, listingId, mode, {
       description: userDescription,
       unitOfMeasurement,
+      customPrompt,
     });
 
     // Build response
